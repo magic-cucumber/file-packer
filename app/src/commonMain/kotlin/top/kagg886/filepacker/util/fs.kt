@@ -94,3 +94,5 @@ fun Path.walk(consumer: (Path) -> Unit) {
         child.walk(consumer)
     }
 }
+
+expect fun current(): Path

@@ -45,6 +45,7 @@ import top.kagg886.filepacker.util.*
 class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
 
     override val debug by option(help = "enable debug log").flag()
+    val helper by option(help = "create a shell script to decrypt file").flag()
     val blockSize by option(help = "max block size,unit is KB. default is 256").long().default(128)
 
     private val output by option(help = "the output folder")
@@ -239,5 +240,11 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
             it.writeLong(blockSize) //here is bytes.
             it.write(Cbor.encodeToByteArray(path2index.map { kv -> kv.value }))
         }
+
+        if (helper) {
+            output.writeShell()
+        }
     }
 }
+
+expect fun Path.writeShell()

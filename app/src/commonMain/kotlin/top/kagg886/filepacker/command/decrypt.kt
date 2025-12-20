@@ -65,7 +65,7 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
             require(!it.exists()) { "output folder already exists" }
         }
 
-    @OptIn(ExperimentalSerializationApi::class)
+    @OptIn(ExperimentalSerializationApi::class, ExperimentalUuidApi::class)
     override suspend fun run() {
         val (blockSize, metadata) = run {
             val meta = (input / "index.cbor").source().buffer()
@@ -93,7 +93,8 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
 
         val payload = run {
             val origin = (input / "payload.bin")
-            val tmp = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "payload.bin"
+            val tmp = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "${Uuid.random().toHexString().replace("-","")}.bin"
+            debug("create uncompressed file to $tmp")
             tmp.create()
             origin.source().gzip().use { i->
                 tmp.sink().use { o->

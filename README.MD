@@ -58,6 +58,7 @@ Parameter description:
 - `--output`: Output folder path, defaults to input folder name + "-encrypt"
 - `--block-size`: Block size in KB, defaults to 128KB
 - `--debug`: Enable debug logging
+- `--helper`: Generates a one-click extraction script (only compatible with the same platform used for encryption).
 
 Notes:
 1. The input folder must exist and be a directory

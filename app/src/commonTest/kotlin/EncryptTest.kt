@@ -27,4 +27,14 @@ class EncryptTest {
         val tester = EncryptCommand().test("--debug test")
         println(tester.output)
     }
+
+    @Test
+    fun testEncryptHelper() = runTest {
+        val path = "test"
+        "test-encrypt".toPath().run {
+            if (exists()) delete()
+        }
+        val tester = EncryptCommand().test("--debug --helper test")
+        println(tester.output)
+    }
 }

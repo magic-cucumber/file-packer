@@ -4,10 +4,27 @@ plugins {
 }
 
 kotlin {
+
     jvm()
     listOf(
-        macosX64(),
-        macosArm64(),
+        macosX64{
+            compilations.getByName("main") {
+                val current by cinterops.creating {
+                    defFile("src/macosMain/interop/current.def")
+                    packageName("current")
+                    includeDirs("src/macosMain/interop/include")
+                }
+            }
+        },
+        macosArm64 {
+            compilations.getByName("main") {
+                val current by cinterops.creating {
+                    defFile("src/macosMain/interop/current.def")
+                    packageName("current")
+                    includeDirs("src/macosMain/interop/include")
+                }
+            }
+        },
         linuxX64(),
         mingwX64(),
     ).forEach {

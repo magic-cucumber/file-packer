@@ -10,12 +10,13 @@ import top.kagg886.filepacker.util.sink
 
 actual fun Path.writeShell() {
     current().moveTo(this / "extract.exe")
-    val path = this / "unpack.sh"
+    val path = this / "unpack.bat"
     path.create()
     path.sink().buffer().use { o ->
         o.writeUtf8(
             """
                     @echo off
+                    cd /d "%~dp0"
                     if not exist "extract.exe" (
                         echo [Error] extract.exe not found.
                         pause

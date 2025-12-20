@@ -20,12 +20,15 @@ import com.github.ajalt.mordant.widgets.progress.progressBar
 import com.github.ajalt.mordant.widgets.progress.progressBarLayout
 import com.github.ajalt.mordant.widgets.progress.text
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.encodeToByteArray
 import okio.Buffer
+import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
@@ -33,6 +36,8 @@ import okio.gzip
 import okio.use
 import top.kagg886.filepacker.data.FileDescriptor
 import top.kagg886.filepacker.util.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * ================================================
@@ -56,7 +61,7 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
         .convert { it.toPath() }
         .validate { require(it.exists() && it.isDirectory) { "input folder does not exist." } }
 
-    @OptIn(ExperimentalSerializationApi::class)
+    @OptIn(ExperimentalSerializationApi::class, ExperimentalUuidApi::class)
     override suspend fun run() {
         debug("blockSize = $blockSize")
         debug("input = $input")
@@ -94,8 +99,10 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
         }
         val payloadLength = path2index.values.sumOf { fd -> fd.blocks.size }
 
-        val payload = (output / "payload.bin").let {
+        val tmp = output / "${Uuid.random().toHexString()}.temp"
+        val payload = tmp.let {
             val size = payloadLength * blockSize
+            it.parent!!.mkdirs()
             it.create(size)
             it.open()
         }
@@ -190,11 +197,21 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
                 progress.execute()
             }
 
+            val path2mutex = buildMap {
+                for (i in path2index.keys) {
+                    put(i, Mutex())
+                }
+            }
+
             srcOffsets.map { task ->
                 async {
                     val src = Buffer().apply {
-                        task.path.open().source(task.srcOffset).use {
-                            it.read(this, task.srcLength)
+                        path2mutex[task.path]!!.withLock {
+                            task.path.open(true).use { handle ->
+                                handle.source(task.srcOffset).use {
+                                    it.read(this, task.srcLength)
+                                }
+                            }
                         }
                     }
 
@@ -214,9 +231,9 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
         payloadProtectToNotClose.close()
 
         //gzip it
-        (output / "payload.bin").source().use { i ->
-            echo("compressing files...")
-            val sink = (output / "payload.bin.gz").run {
+        tmp.source().use { i ->
+            info("compressing files...")
+            val sink = (output / "payload.bin").run {
                 create()
                 sink()
             }
@@ -224,11 +241,7 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
             sink.gzip().use { o ->
                 i.transfer(o)
             }
-
         }
-
-        (output / "payload.bin").delete()
-        (output / "payload.bin.gz").moveTo(output / "payload.bin")
 
 
         val index = (output / "index.cbor").run {
@@ -242,10 +255,11 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
             it.writeLong(blockSize) //here is bytes.
             it.write(Cbor.encodeToByteArray(path2index.map { kv -> kv.value }))
         }
-
         if (helper) {
             output.writeShell()
         }
+
+        tmp.delete()
     }
 }
 

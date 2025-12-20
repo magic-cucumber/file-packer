@@ -25,27 +25,30 @@ fun Path.list() = FileSystem.SYSTEM.list(this)
 fun Path.delete() = FileSystem.SYSTEM.deleteRecursively(this, true)
 fun Path.mkdirs() = FileSystem.SYSTEM.createDirectories(this)
 fun Path.source() = FileSystem.SYSTEM.source(this)
-fun Path.sink() = FileSystem.SYSTEM.openReadWrite(this).sink()
+fun Path.sink() = AutoClosableSink(FileSystem.SYSTEM.openReadWrite(this))
 fun Path.absolute(): Path = FileSystem.SYSTEM.canonicalize(this)
 
 
 private const val BUFFER_SIZE = 8192L * 1024L
 fun Path.create(size: Long = 0L) =
-    if (exists()) throw IOException("file already exists") else FileSystem.SYSTEM.sink(this).buffer().use {
+    if (exists()) throw IOException("file already exists") else FileSystem.SYSTEM.sink(this).use { sink->
         val block = size / BUFFER_SIZE
         val until = size % BUFFER_SIZE
 
         val byte = ByteArray(BUFFER_SIZE.toInt())
 
-        repeat(block.toInt()) { _ ->
-            it.write(byte)
+        sink.buffer().use {
+            repeat(block.toInt()) { _ ->
+                it.write(byte)
+            }
+            it.write(ByteArray(until.toInt()))
+            it.flush()
+            it.close()
         }
-        it.write(ByteArray(until.toInt()))
-        it.flush()
-        it.close()
     }
 
-fun Path.open() = FileSystem.SYSTEM.openReadWrite(this, mustExist = true)
+fun Path.open(readonly: Boolean = false) =
+    if (readonly) FileSystem.SYSTEM.openReadOnly(this) else FileSystem.SYSTEM.openReadWrite(this, mustExist = true)
 
 fun Source.transfer(sink: Sink) {
     val buf = Buffer()
@@ -57,7 +60,11 @@ fun Source.transfer(sink: Sink) {
 }
 
 fun Path.moveTo(path: Path) {
-    if (isDirectory || path.isDirectory) error("the input or output must be file.")
+    if (isDirectory) error("the input or output must be file.")
+
+    if (path.exists()) {
+        path.delete()
+    }
     // IOException -
     // if the move cannot be performed, or cannot be performed atomically.
     // Moves fail if the source doesn't exist,
@@ -98,3 +105,10 @@ fun Path.walk(consumer: (Path) -> Unit) {
 }
 
 expect fun current(): Path
+
+
+class AutoClosableSink(private val handle: FileHandle) : Sink by handle.sink() {
+    override fun close() {
+        handle.close()
+    }
+}

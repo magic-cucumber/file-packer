@@ -22,7 +22,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -91,17 +93,19 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
         debug("input = $input")
         debug("output = $output")
 
+        val tmp = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "${Uuid.random().toHexString().replace("-", "")}.bin"
         val payload = run {
             val origin = (input / "payload.bin")
-            val tmp = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "${Uuid.random().toHexString().replace("-","")}.bin"
             debug("create uncompressed file to $tmp")
+
+            tmp.parent!!.mkdirs()
             tmp.create()
-            origin.source().gzip().use { i->
-                tmp.sink().use { o->
+            origin.source().gzip().use { i ->
+                tmp.sink().use { o ->
                     i.transfer(o)
                 }
             }
-            tmp.open()
+            tmp.open(true)
         }
         val payloadProtectNotClose = payload.source()
 
@@ -166,18 +170,28 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
         }
 
         withContext(Dispatchers.IO) {
+            val path2mutex = buildMap {
+                for (i in metadata.map { it.path }.toSet()) {
+                    put(i, Mutex())
+                }
+            }
+
             contexts.map { task ->
                 async {
                     val buffer = Buffer().apply {
                         readLock.withPermit {
-                            payload.source(task.srcOffset).read(this, task.length)
+                            payload.source(task.srcOffset).use { it.read(this, task.length) }
                         }
                     }
 
                     writeLock.withPermit {
-                        output.resolve(task.file).open().sink(task.dstOffset).use { dst ->
-                            dst.write(buffer, buffer.size)
-                            dst.flush()
+                        path2mutex[task.file]!!.withLock {
+                            output.resolve(task.file).open(true).use { handle ->
+                                handle.sink(task.dstOffset).use { dst ->
+                                    dst.write(buffer, buffer.size)
+                                    dst.flush()
+                                }
+                            }
                         }
                         path2layout[task.file]!!.advance(1)
                     }
@@ -185,6 +199,8 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
             }.awaitAll()
         }
 
+        payload.close()
         payloadProtectNotClose.close()
+        tmp.delete()
     }
 }

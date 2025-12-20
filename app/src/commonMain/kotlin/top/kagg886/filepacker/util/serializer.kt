@@ -2,6 +2,7 @@ package top.kagg886.filepacker.util
 
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.ByteArraySerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -24,9 +25,9 @@ import kotlin.random.Random
 
 
 object PathSerializer : KSerializer<Path> {
+    private val delegate = serializer<ByteArray>()
     @OptIn(InternalSerializationApi::class)
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Path", PrimitiveKind.STRING)
-
+    override val descriptor: SerialDescriptor = delegate.descriptor
     override fun serialize(encoder: Encoder, value: Path) {
         val keychain = Random.nextBytes(16)
         val (salt, iv, data) = AES.encrypt(data = value.toString(), keychain = keychain)
@@ -38,11 +39,10 @@ object PathSerializer : KSerializer<Path> {
         buf.write(iv)
         buf.write(data)
 
-        encoder.encodeString(buf.readByteArray().toHexString())
+        encoder.encodeSerializableValue(delegate, buf.readByteArray())
     }
-
     override fun deserialize(decoder: Decoder): Path {
-        val buf = Buffer().write(decoder.decodeString().hexToByteArray())
+        val buf = Buffer().write(decoder.decodeSerializableValue(delegate))
 
         val keychain = buf.readByteArray(16)
         val salt = buf.readByteArray(SALT_SIZE.toLong())

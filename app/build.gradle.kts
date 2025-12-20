@@ -1,35 +1,62 @@
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetWithHostTests
+import util.Platform
+import util.platform
+
 plugins {
-    alias(libs.plugins.multiplatform)
+    id("org.jetbrains.kotlin.multiplatform")
     alias(libs.plugins.kotlinx.serialization)
 }
 
+logger.lifecycle("Platform: $platform")
+logger.lifecycle("jar build enabled: $build_jvm")
+logger.lifecycle("native build type: $build_platform")
+
+inline fun allow(target: Platform, block: () -> Unit) =
+    if (build_platform.isAll || (build_platform.isPlatform && platform == target)) block() else Unit
+
 kotlin {
 
-    jvm()
-    listOf(
-        macosX64{
-            compilations.getByName("main") {
-                val current by cinterops.creating {
-                    defFile("src/macosMain/interop/current.def")
-                    packageName("current")
-                    includeDirs("src/macosMain/interop/include")
-                }
-            }
-        },
-        macosArm64 {
-            compilations.getByName("main") {
-                val current by cinterops.creating {
-                    defFile("src/macosMain/interop/current.def")
-                    packageName("current")
-                    includeDirs("src/macosMain/interop/include")
-                }
-            }
-        },
-        linuxX64(),
-        mingwX64(),
-    ).forEach {
-        it.binaries.executable {
+
+    fun KotlinNativeTargetWithHostTests.configureCommon() {
+        binaries.executable {
             entryPoint = "main"
+        }
+    }
+
+    fun KotlinNativeTargetWithHostTests.configureMacOS() {
+        compilations.getByName("main") {
+            val current by cinterops.creating {
+                defFile("src/macosMain/interop/current.def")
+                packageName("current")
+                includeDirs("src/macosMain/interop/include")
+            }
+        }
+    }
+
+    if (build_jvm) {
+        jvm()
+    }
+
+    allow(Platform.MACOS) {
+        macosX64 {
+            configureCommon()
+            configureMacOS()
+        }
+        macosArm64 {
+            configureCommon()
+            configureMacOS()
+        }
+    }
+
+    allow(Platform.LINUX) {
+        linuxX64 {
+            configureCommon()
+        }
+    }
+
+    allow(Platform.WINDOWS) {
+        mingwX64 {
+            configureCommon()
         }
     }
 

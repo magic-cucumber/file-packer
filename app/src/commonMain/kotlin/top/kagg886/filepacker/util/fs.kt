@@ -57,6 +57,7 @@ fun Source.transfer(sink: Sink) {
 }
 
 fun Path.moveTo(path: Path) {
+    if (isDirectory || path.isDirectory) error("the input or output must be file.")
     // IOException -
     // if the move cannot be performed, or cannot be performed atomically.
     // Moves fail if the source doesn't exist,
@@ -74,6 +75,7 @@ fun Path.moveTo(path: Path) {
                 i.transfer(o)
             }
         }
+        delete()
     }
 }
 

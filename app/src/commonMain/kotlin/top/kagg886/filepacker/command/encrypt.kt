@@ -225,9 +225,11 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
                 i.transfer(o)
             }
 
-            (output / "payload.bin").delete()
-            (output / "payload.bin.gz").moveTo(output / "payload.bin")
         }
+
+        (output / "payload.bin").delete()
+        (output / "payload.bin.gz").moveTo(output / "payload.bin")
+
 
         val index = (output / "index.cbor").run {
             create()

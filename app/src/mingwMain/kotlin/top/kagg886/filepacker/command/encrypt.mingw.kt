@@ -9,19 +9,19 @@ import top.kagg886.filepacker.util.moveTo
 import top.kagg886.filepacker.util.sink
 
 actual fun Path.writeShell() {
-    current().moveTo(this / "extract.kexe")
+    current().moveTo(this / "extract.exe")
     val path = this / "unpack.sh"
     path.create()
     path.sink().buffer().use { o ->
         o.writeUtf8(
             """
                     @echo off
-                    if not exist "extract.kexe" (
-                        echo [Error] extract.kexe not found.
+                    if not exist "extract.exe" (
+                        echo [Error] extract.exe not found.
                         pause
                         exit /b
                     )
-                    extract.kexe decrypt "../${name}" --output="${name}-decrypted"
+                    extract.exe decrypt "../${name}" --output="${name}-decrypted"
                     echo [Info] unpack success.
                 """.trimIndent()
         )

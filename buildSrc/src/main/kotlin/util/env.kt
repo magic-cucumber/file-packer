@@ -11,6 +11,9 @@ internal val lock = ReentrantLock()
 internal fun Project.local(key: String): String? {
     val prop = lock.withLock {
         val file = rootProject.file("local.properties")
+        if (prop != null) {
+            return@withLock prop!!
+        }
         if (!file.exists()) {
             return@withLock Properties().apply {
                 prop = this

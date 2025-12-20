@@ -29,9 +29,11 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import okio.Buffer
+import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
+import okio.gzip
 import okio.use
 import top.kagg886.filepacker.data.FileDescriptor
 import top.kagg886.filepacker.util.*
@@ -89,7 +91,17 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
         debug("input = $input")
         debug("output = $output")
 
-        val payload = (input / "payload.bin").open()
+        val payload = run {
+            val origin = (input / "payload.bin")
+            val tmp = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "payload.bin"
+            tmp.create()
+            origin.source().gzip().use { i->
+                tmp.sink().use { o->
+                    i.transfer(o)
+                }
+            }
+            tmp.open()
+        }
         val payloadProtectNotClose = payload.source()
 
 

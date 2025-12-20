@@ -1,11 +1,13 @@
 package top.kagg886.filepacker.util
 
+import okio.Buffer
 import okio.FileHandle
 import okio.FileSystem
 import okio.IOException
 import okio.Path
 import okio.SYSTEM
 import okio.Sink
+import okio.Source
 import okio.buffer
 import okio.use
 
@@ -39,9 +41,41 @@ fun Path.create(size: Long = 0L) =
             it.write(byte)
         }
         it.write(ByteArray(until.toInt()))
+        it.flush()
+        it.close()
     }
 
 fun Path.open() = FileSystem.SYSTEM.openReadWrite(this, mustExist = true)
+
+fun Source.transfer(sink: Sink) {
+    val buf = Buffer()
+    while (read(buf, BUFFER_SIZE) != -1L) {
+        sink.write(buf, buf.size)
+        sink.flush()
+        buf.clear()
+    }
+}
+
+fun Path.moveTo(path: Path) {
+    // IOException -
+    // if the move cannot be performed, or cannot be performed atomically.
+    // Moves fail if the source doesn't exist,
+    // if the target is not writable,
+    // if the target already exists and cannot be replaced,
+    // or if the move would cause physical or quota limits to be exceeded.
+    // This list of potential problems is not exhaustive.
+    try {
+        FileSystem.SYSTEM.atomicMove(this, path)
+    } catch (_: IOException) {
+        path.parent!!.mkdirs()
+        path.create()
+        path.sink().use { o ->
+            this.source().use { i ->
+                i.transfer(o)
+            }
+        }
+    }
+}
 
 
 val Path.isFile

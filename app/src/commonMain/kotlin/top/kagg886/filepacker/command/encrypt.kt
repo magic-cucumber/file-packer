@@ -10,7 +10,6 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
-import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
 import com.github.ajalt.mordant.animation.progress.MultiProgressBarAnimation
@@ -30,6 +29,7 @@ import okio.Buffer
 import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
+import okio.gzip
 import okio.use
 import top.kagg886.filepacker.data.FileDescriptor
 import top.kagg886.filepacker.util.*
@@ -212,6 +212,21 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
         payload.close()
         payloadProtectToNotClose.close()
 
+        //gzip it
+        (output / "payload.bin").source().use { i ->
+            echo("compressing files...")
+            val sink = (output / "payload.bin.gz").run {
+                create()
+                sink()
+            }
+
+            sink.gzip().use { o ->
+                i.transfer(o)
+            }
+
+            (output / "payload.bin").delete()
+            (output / "payload.bin.gz").moveTo(output / "payload.bin")
+        }
 
         val index = (output / "index.cbor").run {
             create()

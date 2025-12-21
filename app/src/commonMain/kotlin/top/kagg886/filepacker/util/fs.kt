@@ -31,7 +31,7 @@ fun Path.absolute(): Path = FileSystem.SYSTEM.canonicalize(this)
 
 private const val BUFFER_SIZE = 8192L * 1024L
 fun Path.create(size: Long = 0L) =
-    if (exists()) throw IOException("file already exists") else FileSystem.SYSTEM.sink(this).use { sink->
+    if (exists()) throw IOException("file already exists") else FileSystem.SYSTEM.sink(this).use { sink ->
         val block = size / BUFFER_SIZE
         val until = size % BUFFER_SIZE
 
@@ -107,8 +107,9 @@ fun Path.walk(consumer: (Path) -> Unit) {
 expect fun current(): Path
 
 
-class AutoClosableSink(private val handle: FileHandle) : Sink by handle.sink() {
+class AutoClosableSink(private val handle: FileHandle, private val sink: Sink = handle.sink()) : Sink by sink {
     override fun close() {
+        sink.close()
         handle.close()
     }
 }

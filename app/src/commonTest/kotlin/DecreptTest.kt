@@ -26,10 +26,6 @@ import kotlin.test.assertEquals
  */
 class DecryptTest {
     @Test
-    fun testHelp() = runTest {
-        println(DecryptCommand().test("--help").output)
-    }
-    @Test
     fun testDecrypt() = runTest {
         "test-decrypt".toPath().run {
             if (exists()) delete()

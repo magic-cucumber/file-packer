@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -93,16 +94,18 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
         debug("input = $input")
         debug("output = $output")
 
-        val tmp = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "${Uuid.random().toHexString().replace("-", "")}.bin"
+        val tmp = output / "${Uuid.random().toHexString().replace("-", "")}.bin"
         val payload = run {
             val origin = (input / "payload.bin")
             debug("create uncompressed file to $tmp")
 
             tmp.parent!!.mkdirs()
             tmp.create()
-            origin.source().gzip().use { i ->
-                tmp.sink().use { o ->
-                    i.transfer(o)
+            origin.source().use {
+                it.gzip().use { i ->
+                    tmp.sink().use { o ->
+                        i.transfer(o)
+                    }
                 }
             }
             tmp.open(true)
@@ -154,7 +157,6 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
             }
         }
 
-        val readLock = Semaphore(minOf(16, contexts.size))
         val writeLock = Semaphore(minOf(16, metadata.size))
 
         output.mkdirs()
@@ -176,17 +178,19 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
                 }
             }
 
+            val job = launch {
+                progress.execute()
+            }
+
             contexts.map { task ->
                 async {
                     val buffer = Buffer().apply {
-                        readLock.withPermit {
-                            payload.source(task.srcOffset).use { it.read(this, task.length) }
-                        }
+                        payload.source(task.srcOffset).use { it.read(this, task.length) }
                     }
 
                     writeLock.withPermit {
                         path2mutex[task.file]!!.withLock {
-                            output.resolve(task.file).open(true).use { handle ->
+                            output.resolve(task.file).open().use { handle ->
                                 handle.sink(task.dstOffset).use { dst ->
                                     dst.write(buffer, buffer.size)
                                     dst.flush()
@@ -197,6 +201,8 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
                     }
                 }
             }.awaitAll()
+
+            job.join()
         }
 
         payload.close()

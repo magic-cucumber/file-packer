@@ -175,7 +175,7 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
             debug("file split: $k: ${v.blocks.joinToString()}")
         }
 
-        val write = Semaphore(minOf(16, payloadLength)) //少于payloadLength个块不需要控制信号量
+        val read = Semaphore(minOf(16, payloadLength)) //少于payloadLength个块不需要控制信号量
         val progress = MultiProgressBarAnimation(terminal).animateInCoroutine()
         val path2layout = buildMap {
             for (k in path2index.keys) {
@@ -205,23 +205,24 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
 
             srcOffsets.map { task ->
                 async {
-                    val src = Buffer().apply {
-                        path2mutex[task.path]!!.withLock {
-                            task.path.open(true).use { handle ->
-                                handle.source(task.srcOffset).use {
-                                    it.read(this, task.srcLength)
+                    path2mutex[task.path]!!.withLock {
+                        val src = read.withPermit {
+                            Buffer().apply {
+                                task.path.open(true).use { handle ->
+                                    handle.source(task.srcOffset).use {
+                                        it.read(this, task.srcLength)
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    write.withPermit { //update
                         payload.sink(task.dstOffset).use {
                             it.write(src, task.srcLength)
                             it.flush()
                         }
                         path2layout[task.path]!!.advance(1)
                     }
+
                 }
             }.awaitAll()
 

@@ -2,6 +2,7 @@ package top.kagg886.filepacker.command
 
 import okio.Path
 import okio.buffer
+import top.kagg886.filepacker.util.copyTo
 import top.kagg886.filepacker.util.create
 import top.kagg886.filepacker.util.current
 import top.kagg886.filepacker.util.moveTo
@@ -9,7 +10,7 @@ import top.kagg886.filepacker.util.sink
 
 actual fun Path.writeShell() = when (System.getProperty("os.name").contains("Windows")) {
     true -> {
-        current().moveTo(this / "extract.jar")
+        current().copyTo(this / "extract.jar")
 
         val path = this / "unpack.bat"
         path.create()
@@ -23,14 +24,14 @@ actual fun Path.writeShell() = when (System.getProperty("os.name").contains("Win
                         pause
                         exit /b
                     )
-                    
-                    if not exist "extract.jar" (
-                        echo [Error] extract.kexe not found.
+                    set "JAR_PATH=%~dp0extract.jar"
+                    if not exist "%JAR_PATH%" (
+                        echo [Error] extract.jar not found at: %JAR_PATH%
                         pause
                         exit /b
                     )
-                    java -jar extract.jar decrypt "../" --output="${name}-decrypted"
-                    echo [Info] unpack success.
+                    java -jar "%JAR_PATH%" decrypt "../${name}" --output="${name}-decrypted"
+                    echo [Info] Task finished.
                 """.trimIndent(), Charsets.UTF_8
             )
             o.flush()
@@ -38,7 +39,7 @@ actual fun Path.writeShell() = when (System.getProperty("os.name").contains("Win
     }
 
     false -> {
-        current().moveTo(this / "extract.jar")
+        current().copyTo(this / "extract.jar")
         val path = this / "unpack.sh"
         path.create()
         path.sink().buffer().use { o ->

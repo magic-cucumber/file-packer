@@ -59,8 +59,10 @@ fun Source.transfer(sink: Sink) {
     }
 }
 
+fun Path.copyTo(path: Path) = FileSystem.SYSTEM.copy(this,path)
+
 fun Path.moveTo(path: Path) {
-    if (isDirectory) error("the input or output must be file.")
+    if (exists() && isDirectory) error("the input or output must be file.")
 
     if (path.exists()) {
         path.delete()

@@ -14,16 +14,23 @@ actual fun Path.writeShell() {
     path.create()
     path.sink().buffer().use { o ->
         o.writeUtf8(
-            """
-                    #!/bin/bash
-                    if [ ! -f "extract.kexe" ]; then
-                        echo "[Error] extract.kexe not found."
-                        exit 1
-                    fi
-                    chmod +x extract.kexe
-                    ./extract.kexe decrypt "../${name}" --output="${name}-decrypted"
-                    echo "[Info] unpack success."
-                """.trimIndent()
+            $$"""
+                        #!/bin/bash
+
+                        SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+                        EXE_PATH="$SCRIPT_DIR/extract.kexe"
+                        
+                        if [ ! -f "$EXE_PATH" ]; then
+                            echo "[Error] extract.kexe not found at: $EXE_PATH"
+                            exit 1
+                        fi
+                        
+                        chmod +x "$EXE_PATH"
+                        
+                        "$EXE_PATH" decrypt "$SCRIPT_DIR" --output="$$name-decrypted"
+                        
+                        echo "[Info] unpack success."
+                    """.trimIndent()
         )
         o.flush()
     }

@@ -3,13 +3,13 @@ package top.kagg886.filepacker.command
 import okio.Path
 import okio.buffer
 import okio.use
+import top.kagg886.filepacker.util.copyTo
 import top.kagg886.filepacker.util.create
 import top.kagg886.filepacker.util.current
-import top.kagg886.filepacker.util.moveTo
 import top.kagg886.filepacker.util.sink
 
 actual fun Path.writeShell() {
-    current().moveTo(this / "extract.kexe")
+    current().copyTo(this / "extract.kexe")
     val path = this / "unpack.sh"
     path.create()
     path.sink().buffer().use { o ->

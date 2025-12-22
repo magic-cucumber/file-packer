@@ -27,15 +27,15 @@ import kotlin.test.assertEquals
 class DecryptTest {
     @Test
     fun testDecrypt() = runTest {
-        "test-decrypt".toPath().run {
+        "test-encrypt-decrypt".toPath().run {
             if (exists()) delete()
         }
-        val tester = DecryptCommand().test("--debug test-encrypt --output test-decrypt")
+        val tester = DecryptCommand().test("--debug test-encrypt")
         println(tester.output)
 
-        "test-decrypt".toPath().walk {
+        "test-encrypt-decrypt".toPath().walk {
             val md5New = it.md5()
-            val md5Old = ("test".toPath() / it.relativeTo("test-decrypt".toPath())).md5()
+            val md5Old = ("test".toPath() / it.relativeTo("test-encrypt-decrypt".toPath())).md5()
 
             assertEquals(md5New, md5Old, "File $it is not equal: $it's md5 is $md5New,${("test".toPath() / it)}'s md5 is $md5Old")
         }

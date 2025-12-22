@@ -51,7 +51,7 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
 
     override val debug by option(help = "enable debug log").flag()
     val helper by option(help = "create a shell script to decrypt file").flag()
-    val blockSize by option(help = "max block size,unit is KB. default is 256").long().default(128)
+    val blockSize by option(help = "max block size,unit is KB. default is 256").long().default(256)
 
     private val output by option(help = "the output folder")
         .convert { it.toPath() }
@@ -63,7 +63,10 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
 
     @OptIn(ExperimentalSerializationApi::class, ExperimentalUuidApi::class)
     override suspend fun run() {
-        debug("blockSize = $blockSize")
+        val output = (output ?: (input.parent!! / "${input.name}-encrypt"))
+
+        debug("executable path = ${current()}")
+        debug("blockSize = ${blockSize.kb}")
         debug("input = $input")
         debug("output = $output")
 
@@ -90,17 +93,20 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
             }
         }
 
+        info("file info: find ${path2index.size} files.")
         for ((k, v) in path2index.entries) {
             debug("file info: $k: ${v.blocks.size - 1} * 128K + ${v.last} = ${k.size}")
         }
 
-        val output = (output ?: (input.parent!! / "${input.name}-encrypt")).apply {
+        output.apply {
+            debug("create output folder on: $this")
             mkdirs()
         }
         val payloadLength = path2index.values.sumOf { fd -> fd.blocks.size }
 
         val tmp = output / "${Uuid.random().toHexString()}.temp"
         val payload = tmp.let {
+            debug("create temp file on: $it, size is ${(payloadLength * blockSize).b}")
             val size = payloadLength * blockSize
             it.parent!!.mkdirs()
             it.create(size)
@@ -158,6 +164,7 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
             }
         }
 
+        info("context info: split ${path2index.size} files to ${srcOffsets.size}'s blocks, each blocks is ${this.blockSize.kb}.")
         for (i in srcOffsets) {
 //            [Debug]: context info: path=.DS_Store,srcOffset=0,srcLength=6148,dstOffset=655360
 //            [Debug]: context info: path=libgif_rust.dylib,srcOffset=0,srcLength=131072,dstOffset=131072
@@ -176,6 +183,8 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
         }
 
         val read = Semaphore(minOf(16, payloadLength)) //少于payloadLength个块不需要控制信号量
+        debug("maximum file will be handled by this task: ${read.availablePermits}")
+
         val progress = MultiProgressBarAnimation(terminal).animateInCoroutine()
         val path2layout = buildMap {
             for (k in path2index.keys) {
@@ -244,6 +253,7 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
             }
         }
 
+        info("writing metadata...")
 
         val index = (output / "index.cbor").run {
             create()
@@ -257,9 +267,11 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
             it.write(Cbor.encodeToByteArray(path2index.map { kv -> kv.value }))
         }
         if (helper) {
+            info("writing shell script...")
             output.writeShell()
         }
 
+        info("deleting temp file...")
         tmp.delete()
     }
 }

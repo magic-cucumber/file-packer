@@ -13,7 +13,6 @@ import platform.windows.GetCommandLineW
 
 @OptIn(ExperimentalForeignApi::class)
 actual fun main(args: Array<String>) {
-    println(args.toList())
     setlocale(LC_ALL, ".UTF8")
     val cmdLineW = GetCommandLineW()
     val cmdLineKString = cmdLineW?.toKStringFromUtf16() ?: ""
@@ -26,8 +25,5 @@ actual fun main(args: Array<String>) {
             argv?.get(it)?.toKStringFromUtf16() ?: ""
         }
     }
-
-    println(args.drop(1))
-
     execute(args.drop(1).toTypedArray())
 }

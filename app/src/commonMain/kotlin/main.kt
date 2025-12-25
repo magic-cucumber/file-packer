@@ -14,7 +14,9 @@ import top.kagg886.filepacker.command.EncryptCommand
  * Created on: 2025/12/19 13:29
  * ================================================
  */
-fun main(args: Array<String>) = runBlocking(Dispatchers.IO) {
+expect fun main(args: Array<String>)
+
+fun execute(args: Array<String>) = runBlocking(Dispatchers.IO) {
     Main().subcommands(EncryptCommand(), DecryptCommand()).main(args)
 }
 
@@ -28,5 +30,6 @@ class Main : SuspendingCliktCommand(name = "file-packer") {
         
         - decrypt: ./file-packer decrypt test-encrypt --output test-decrypt
     """.trimIndent()
+
     override suspend fun run() = Unit
 }

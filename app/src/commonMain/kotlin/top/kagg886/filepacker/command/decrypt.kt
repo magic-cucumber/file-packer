@@ -63,14 +63,20 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
     @OptIn(ExperimentalUuidApi::class)
     val output by option(help = "output folder")
         .convert { it.toPath() }
-        .default(Uuid.random().toString().replace("-", "").toPath())
         .validate {
             require(!it.exists()) { "output folder already exists" }
         }
 
     @OptIn(ExperimentalSerializationApi::class, ExperimentalUuidApi::class)
     override suspend fun run() {
+        val output = (output ?: (input.parent!! / "${input.name}-decrypt"))
+
+        debug("executable path = ${current()}")
+        debug("input = $input")
+        debug("output = $output")
+
         val (blockSize, metadata) = run {
+            info("reading metadata...")
             val meta = (input / "index.cbor").source().buffer()
             val magic = meta.readLong()
             val version = meta.readLong()
@@ -89,10 +95,8 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
             blockSize to Cbor.decodeFromByteArray<List<FileDescriptor>>(meta.readByteArray())
         }
 
-
-        debug("blockSize = $blockSize")
-        debug("input = $input")
-        debug("output = $output")
+        info("successful to detect ${metadata.size} files.")
+        debug("metadata reading success, blockSize = ${blockSize.b}, fileCount = ${metadata.size}")
 
         val tmp = output / "${Uuid.random().toHexString().replace("-", "")}.bin"
         val payload = run {
@@ -158,7 +162,9 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
         }
 
         val writeLock = Semaphore(minOf(16, metadata.size))
+        debug("maximum file will be handled by this task: ${writeLock.availablePermits}")
 
+        info("building output folder tree...")
         output.mkdirs()
         withContext(Dispatchers.IO) {
             metadata.map { task ->
@@ -170,10 +176,10 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
                 }
             }
         }
-
+        info("start to unpack data...")
         withContext(Dispatchers.IO) {
             val path2mutex = buildMap {
-                for (i in metadata.map { it.path }.toSet()) {
+                for (i in metadata.map { it.path }) {
                     put(i, Mutex())
                 }
             }
@@ -204,7 +210,7 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
 
             job.join()
         }
-
+        info("delete tmp file...")
         payload.close()
         payloadProtectNotClose.close()
         tmp.delete()

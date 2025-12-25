@@ -5,7 +5,6 @@ import okio.buffer
 import top.kagg886.filepacker.util.copyTo
 import top.kagg886.filepacker.util.create
 import top.kagg886.filepacker.util.current
-import top.kagg886.filepacker.util.moveTo
 import top.kagg886.filepacker.util.sink
 
 actual fun Path.writeShell() = when (System.getProperty("os.name").contains("Windows")) {
@@ -43,20 +42,27 @@ actual fun Path.writeShell() = when (System.getProperty("os.name").contains("Win
         val path = this / "unpack.sh"
         path.create()
         path.sink().buffer().use { o ->
-            o.writeString(
-                """
+            o.writeUtf8(
+                $$"""
                     #!/bin/bash
                     if ! command -v java &> /dev/null; then
                         echo "[Error] can't find java path. Please install Java first."
                         exit 1
                     fi
-                    if [ ! -f "extract.jar" ]; then
-                        echo "[Error] extract.jar not found."
+                    
+                    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+                    JAR_PATH="$SCRIPT_DIR/extract.jar"
+                    
+                    if [ ! -f "$JAR_PATH" ]; then
+                        echo "[Error] extract.jar not found at: $JAR_PATH"
                         exit 1
                     fi
-                    java -jar extract.jar decrypt "../${name}" --output="${name}-decrypted"
+                    
+                    java -jar "$JAR_PATH" decrypt "${SCRIPT_DIR}" --output="$${name}-decrypted"
+                    
                     echo "[Info] unpack success."
-                """.trimIndent(), Charsets.UTF_8
+                    echo "[Current Root] $(pwd)"
+                """.trimIndent()
             )
             o.flush()
         }

@@ -6,7 +6,6 @@ import okio.use
 import top.kagg886.filepacker.util.copyTo
 import top.kagg886.filepacker.util.create
 import top.kagg886.filepacker.util.current
-import top.kagg886.filepacker.util.moveTo
 import top.kagg886.filepacker.util.sink
 
 actual fun Path.writeShell() {

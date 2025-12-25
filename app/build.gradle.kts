@@ -16,7 +16,6 @@ inline fun allow(target: Platform, block: () -> Unit) =
 
 kotlin {
 
-
     fun KotlinNativeTargetWithHostTests.configureCommon() {
         binaries.executable {
             entryPoint = "main"
@@ -95,5 +94,25 @@ kotlin {
             }
         }
     }
+}
 
+tasks.register("release") {
+    group = "build"
+    description = "compile release binaries"
+
+    allow(Platform.WINDOWS) {
+        dependsOn("linkReleaseExecutableMingwX64")
+    }
+
+    allow(Platform.MACOS) {
+        //only macOS target can be call xcode tools.
+        if (platform == Platform.MACOS) {
+            dependsOn("linkReleaseExecutableMacosX64")
+            dependsOn("linkReleaseExecutableMacosArm64")
+        }
+    }
+
+    allow(Platform.LINUX) {
+        dependsOn("linkReleaseExecutableLinuxX64")
+    }
 }

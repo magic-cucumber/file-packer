@@ -1,11 +1,12 @@
 [versions]
-
+build-config = "5.6.7"
 kotlin = "2.2.0"
 maven-publish = "0.34.0"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.9.0"
 cryptographyCore = "0.5.0"
 [libraries]
+
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
@@ -17,3 +18,4 @@ cryptography-provider-optimal = { module = "dev.whyoleg.cryptography:cryptograph
 [plugins]
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+build-config = { id = "com.github.gmazzo.buildconfig", version.ref = "build-config" }

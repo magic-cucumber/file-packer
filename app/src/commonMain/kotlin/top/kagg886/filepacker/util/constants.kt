@@ -1,5 +1,7 @@
 package top.kagg886.filepacker.util
 
+import top.kagg886.filepacker.BuildConfig
+
 /**
  * ================================================
  * Author:     886kagg
@@ -8,4 +10,4 @@ package top.kagg886.filepacker.util
  */
 
 const val MAGIC: Long = 0xF007102E
-const val METADATA_VERSION: Long = 1
+const val METADATA_VERSION: Long = BuildConfig.METADATA_VERSION

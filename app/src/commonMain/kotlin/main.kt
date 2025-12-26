@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.core.subcommands
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.runBlocking
+import top.kagg886.filepacker.BuildConfig
 import top.kagg886.filepacker.command.DecryptCommand
 import top.kagg886.filepacker.command.EncryptCommand
 
@@ -22,13 +23,17 @@ fun execute(args: Array<String>) = runBlocking(Dispatchers.IO) {
 
 class Main : SuspendingCliktCommand(name = "file-packer") {
     override fun help(context: Context): String = """
+        File Packer ${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE}), created by kagg886.
+        
         a tool to pack and unpack files.
         
-        some example command:
+        here are some example command:
         
         - encrypt: ./file-packer encrypt test
         
         - decrypt: ./file-packer decrypt test-encrypt --output test-decrypt
+        
+        Github link: https://github/magic-cucumber/file-packer
     """.trimIndent()
 
     override suspend fun run() = Unit

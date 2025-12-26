@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.buildConfig
+import org.gradle.kotlin.dsl.buildConfigField
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetWithHostTests
 import util.Platform
 import util.platform
@@ -5,6 +7,7 @@ import util.platform
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.build.config)
 }
 
 logger.lifecycle("Platform: $platform")
@@ -94,6 +97,13 @@ kotlin {
             }
         }
     }
+}
+
+buildConfig {
+    packageName("top.kagg886.filepacker")
+    buildConfigField("VERSION_NAME","1.0.0")
+    buildConfigField("VERSION_CODE",1)
+    buildConfigField("METADATA_VERSION",1L)
 }
 
 tasks.register("release") {

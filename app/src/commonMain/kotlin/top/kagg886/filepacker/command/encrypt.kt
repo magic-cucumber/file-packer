@@ -63,7 +63,7 @@ class EncryptCommand : SuspendingCliktCommand(name = "encrypt"), Loggable {
 
     @OptIn(ExperimentalSerializationApi::class, ExperimentalUuidApi::class)
     override suspend fun run() {
-        val output = (output ?: (input.parent!! / "${input.name}-encrypt"))
+        val output = (output ?: (current().parent!! / "${input.name}-encrypt"))
 
         debug("executable path = ${current()}")
         debug("blockSize = ${blockSize.kb}")

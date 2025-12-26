@@ -69,7 +69,7 @@ class DecryptCommand : SuspendingCliktCommand(name = "decrypt"), Loggable {
 
     @OptIn(ExperimentalSerializationApi::class, ExperimentalUuidApi::class)
     override suspend fun run() {
-        val output = (output ?: (input.parent!! / "${input.name}-decrypt"))
+        val output = (output ?: (current().parent!! / "${input.name}-decrypt"))
 
         debug("executable path = ${current()}")
         debug("input = $input")

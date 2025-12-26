@@ -2,6 +2,7 @@ rootProject.name = "file-packer"
 
 pluginManagement {
     repositories {
+        mavenLocal()
         google {
             content {
               	includeGroupByRegex("com\\.android.*")
@@ -17,6 +18,7 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
+        mavenLocal()
         google {
             content {
               	includeGroupByRegex("com\\.android.*")

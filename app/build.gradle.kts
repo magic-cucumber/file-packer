@@ -68,7 +68,7 @@ kotlin {
             implementation(libs.cryptography.core)
             implementation(libs.cryptography.provider.optimal)
 
-            implementation("com.squareup.okio:okio:3.16.4")
+            implementation("com.squareup.okio:okio:3.17.0-SNAPSHOT")
             implementation("com.github.ajalt.clikt:clikt:5.0.3")
             implementation("com.github.ajalt.mordant:mordant-coroutines:3.0.2")
         }

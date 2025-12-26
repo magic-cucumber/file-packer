@@ -27,6 +27,19 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Clone okio fork
+        uses: GuillaumeFalourd/clone-github-repo-action@v2.1
+        with:
+          owner: 'magic-cucumber'
+          repository: 'okio'
+          branch: 'feature-non-utf8-support'
+
+      - name: publish to mavenLocal
+        run: |
+          cd okio
+          ./gradlew :okio:publishToMavenLocal
+          cd ..\
+
       - name: Build Native Binaries
         run: ./gradlew app:release
 
